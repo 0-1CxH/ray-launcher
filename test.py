@@ -1,10 +1,10 @@
 import os
 import time
-from core import ClusterLauncher
+from ray_launcher import ClusterLauncher
 
 os.environ["RAY_DISABLE_DOCKER_CPU_WARNING"] = "1"
-
-
+os.environ["RAY_memory_monitor_refresh_ms"] = "0"
+os.environ["RAY_DEDUP_LOGS"] = "0"
 
 with ClusterLauncher(
     cluster_nodes_count=int(os.environ["NNODES"]),
