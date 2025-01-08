@@ -1,7 +1,7 @@
 import os
 import time
 import ray
-
+import traceback
 from loguru import logger
 from .cluster_status_manager import ClusterStatusManager
 from .utils import get_self_addr, run_shell_command, ray_nodes_info_formatter
@@ -117,10 +117,13 @@ class ClusterLauncher:
                     time.sleep(self.worker_node_spin_wait_interval)        
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
-        if exc_traceback:
-            logger.debug(f"exiting context with: {exc_type=}, {exc_value=}, {repr(exc_traceback)}")
+        if exc_type is not None:
+            s = f"exiting context with exception: exception type: {exc_type}, exception value: {exc_value}, "
+            formatted_traceback = ''.join(traceback.format_exception(exc_type, exc_value, exc_traceback))
+            s += f"exception traceback: {formatted_traceback}"
+            logger.error(s)
         else:
-            logger.debug(f"exiting context with: {exc_type=}, {exc_value=}, None")
+            logger.debug("exiting context with no exception")
         
         if self.is_head_node:
             ray.get(self.cluster_status_manager_handle.set_node_validity.remote(self.node_rank, False))
