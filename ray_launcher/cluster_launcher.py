@@ -117,7 +117,10 @@ class ClusterLauncher:
                     time.sleep(self.worker_node_spin_wait_interval)        
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
-        logger.debug(f"exiting context with: {exc_type=}, {exc_value=}, {exc_traceback=}")
+        if exc_traceback:
+            logger.debug(f"exiting context with: {exc_type=}, {exc_value=}, {repr(exc_traceback)}")
+        else:
+            logger.debug(f"exiting context with: {exc_type=}, {exc_value=}, None")
         
         if self.is_head_node:
             ray.get(self.cluster_status_manager_handle.set_node_validity.remote(self.node_rank, False))
