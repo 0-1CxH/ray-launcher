@@ -1,8 +1,8 @@
-# Ray Launcher: An out-of-the-box ray cluster launcher
+# Ray Launcher
 
 ## Introduction
 
-Start ray cluster and migrate from local classes with minimum amount of code.
+`ray-launcher` is an out-of-the-box python library that wraps the frequently used `ray`  practices enabling migrating from local classes and starting ray cluster with minimum amount of code.
 
 ## Updates 
 
