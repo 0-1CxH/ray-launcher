@@ -6,6 +6,7 @@ Start ray cluster and migrate from local classes with minimum amount of code.
 
 ## Updates 
 
+- v1.1.1: add option of not setting cuda devices when creating backend actors
 - v1.1.0: `RemoteModule` provides the wrap for fast converting local class to ray remote class
 - v1.0.1: fixed problem of exiting with 1 node 
 - v1.0.0: `ClusterLauncher` that wraps dirty scripts and spin waits on multi nodes
