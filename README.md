@@ -1,11 +1,14 @@
 # Ray Launcher: An out-of-the-box ray cluster launcher
 
+## Introduction
+
+Start ray cluster and migrate from local classes with minimum amount of code.
+
 ## Updates 
 
 - v1.1.0: `RemoteModule` provides the wrap for fast converting local class to ray remote class
 - v1.0.1: fixed problem of exiting with 1 node 
 - v1.0.0: `ClusterLauncher` that wraps dirty scripts and spin waits on multi nodes
-
 
 ## Features
 
@@ -21,7 +24,6 @@ This ray cluster launcher wraps the following steps internally:
 - head node returns context to main code while worker nodes spin waits for cluster to be torn down
 - worker node run `ray.shutdown` and `ray stop` command after cluster starting to be torn down
 - head exits after all worker nodes exited successfully
-
 
 ### `RemoteModule`
 
@@ -40,6 +42,7 @@ step1: install
 pip install ray-launcher
 ```
 
+
 step2: change local class
 ```python
 class YourClass(BaseBackend):
@@ -55,6 +58,7 @@ with ClusterLauncher(
     cluster_nodes_count=int(os.environ["NNODES"]),
     head_node_addr=os.environ["MASTER_ADDR"],
 ) as launcher:
+
     bundle = [{"GPU": 2, "CPU": 32}, {"GPU": 2, "CPU": 32}]
     pg = ray.util.placement_group(bundle, strategy="PACK")
     module1 = RemoteModule(YourClass, [(pg, 0)], True)
@@ -67,5 +71,5 @@ with ClusterLauncher(
 
 ```
 
-
 For example, see: `test.py` or my other repository uses this lib: [LMarhsal](https://github.com/0-1CxH/LMarhsal)
+
