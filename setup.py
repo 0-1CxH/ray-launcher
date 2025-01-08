@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="ray-launcher",
-    version="1.0.0",
+    version="1.1.0",
     description="An out-of-the-box ray cluster launcher",
     author="0-1CxH",
     author_email="h0.1c@foxmail.com",

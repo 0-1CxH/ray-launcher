@@ -49,6 +49,9 @@ class ClusterStatusManager:
         return self.cluster_status == ClusterStatus.TEARING_DOWN
     
     def is_cluster_finished(self):
+        valid_node_count = self.count_valid_nodes()
+        if valid_node_count == 0:
+            self.cluster_status = ClusterStatus.FINISHED
         return self.cluster_status == ClusterStatus.FINISHED
 
 
