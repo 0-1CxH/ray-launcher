@@ -30,7 +30,6 @@ class RemoteModule:
         self.discrete_gpu_actors = discrete_gpu_actors
         
         self.backend_actors = []
-
         if export_env_var_names is None:
             export_env_var_names = []
         self._create_backend_actors(
@@ -38,6 +37,7 @@ class RemoteModule:
             do_not_set_cuda_visible_devices,
             export_env_var_names
         )
+
 
         self._register_remote_funcs()
 
@@ -76,6 +76,7 @@ class RemoteModule:
                         ).remote()
                     self.backend_actors.append(remote_actor)
                     logger.debug(f"created remote actor {len(self.backend_actors) - 1} of module {self.module_name} on {pg.id} idx={idx} with 1 gpu, {current_bundle_cpu_count_per_gpu} cpu and environ {env_vars}")
+
             assert len(self.backend_actors) > 0
             rank_0_actor = self.backend_actors[0]
             module_master_addr = ray.get(rank_0_actor.get_ip_address.remote())
@@ -110,6 +111,7 @@ class RemoteModule:
                 ).remote()
             )
             logger.debug(f"created single remote actor of module {self.module_name} on {pg.id} idx={idx} with {current_bundle_gpu_count} gpu, {current_bundle_cpu_count} cpu and environ {env_vars}")
+
     
 
     def _call_func_of_all_remote_actors(self, func_name: str, *args, **kwargs):
