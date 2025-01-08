@@ -118,7 +118,7 @@ class ClusterLauncher:
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
         if exc_type is not None:
-            s = f"exiting context with exception: exception type: {exc_type}, exception value: {exc_value}, "
+            s = f"exiting context with exception, exception type: {exc_type}, exception value: {exc_value}, "
             formatted_traceback = ''.join(traceback.format_exception(exc_type, exc_value, exc_traceback))
             s += f"exception traceback: {formatted_traceback}"
             logger.error(s)
