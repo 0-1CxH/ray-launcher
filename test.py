@@ -23,8 +23,8 @@ with ClusterLauncher(
 
     bundle = [{"GPU": 2, "CPU": 32}, {"GPU": 2, "CPU": 32}]
     pg = ray.util.placement_group(bundle, strategy="PACK")
-    module1 = RemoteModule(MockBackend, [(pg, 0)], True)
-    module2 = RemoteModule(MockBackend, [(pg, 1)], False)
+    module1 = RemoteModule(MockBackend, [(pg, 0)], discrete_gpu_actors=True)
+    module2 = RemoteModule(MockBackend, [(pg, 1)], discrete_gpu_actors=False)
 
     print(module1.get_devices())
     print(module2.get_devices())

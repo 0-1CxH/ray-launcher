@@ -61,8 +61,8 @@ with ClusterLauncher(
 
     bundle = [{"GPU": 2, "CPU": 32}, {"GPU": 2, "CPU": 32}]
     pg = ray.util.placement_group(bundle, strategy="PACK")
-    module1 = RemoteModule(YourClass, [(pg, 0)], True)
-    module2 = RemoteModule(YourClass, [(pg, 1)], False)
+    module1 = RemoteModule(YourClass, [(pg, 0)], discrete_gpu_actors=True)
+    module2 = RemoteModule(YourClass, [(pg, 1)], discrete_gpu_actors=False)
 
     print(module1.some_method()) # this will get a list of results of calling each backend actor
     print(module2.some_method()) # this will get one single result, since there is only one backend actor
