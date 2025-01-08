@@ -1,3 +1,4 @@
+import os
 import ray
 import inspect
 
@@ -16,6 +17,8 @@ class RemoteModule:
             backend_clz,
             placement_groups_and_indices: list[PlacementGroupAndIndex],
             discrete_gpu_actors: bool, # must be gpu actor first, cpu actor is not discrete
+            export_env_var_names: list = None,
+            do_not_set_cuda_visible_devices: bool = False,
             module_name: str = None
     ):
         self.backend_clz = backend_clz
@@ -27,12 +30,35 @@ class RemoteModule:
         self.discrete_gpu_actors = discrete_gpu_actors
         
         self.backend_actors = []
-        self._create_backend_actors(placement_groups_and_indices)
+        if export_env_var_names is None:
+            export_env_var_names = []
+        self._create_backend_actors(
+            placement_groups_and_indices, 
+            do_not_set_cuda_visible_devices,
+            export_env_var_names
+        )
+
 
         self._register_remote_funcs()
 
     
-    def _create_backend_actors(self, placement_groups_and_indices: list[PlacementGroupAndIndex]):
+    def _create_backend_actors(
+            self, 
+            placement_groups_and_indices: list[PlacementGroupAndIndex], 
+            do_not_set_cuda_visible_devices: bool,
+            export_env_var_names: list
+        ):
+        env_vars = {}
+        for name in export_env_var_names:
+            if name in os.environ:
+                env_vars.update(
+                    {name: os.environ.get(name)}
+                )
+            else:
+                logger.warning(f"{name} does not exist in environ")
+        if do_not_set_cuda_visible_devices is True:
+             env_vars.update({"RAY_EXPERIMENTAL_NOSET_CUDA_VISIBLE_DEVICES": "1"})
+
         if self.discrete_gpu_actors is True:
             for pg, idx in placement_groups_and_indices:
                 current_bundle_gpu_count = int(pg.bundle_specs[idx].get("GPU"))
@@ -46,10 +72,11 @@ class RemoteModule:
                             scheduling_strategy=PlacementGroupSchedulingStrategy(
                                 placement_group=pg,
                                 placement_group_bundle_index=idx,
-                        )# , runtime_env={"env_vars": {"RAY_DEDUP_LOGS": "0"}}
+                        ) , runtime_env={"env_vars": env_vars}
                         ).remote()
                     self.backend_actors.append(remote_actor)
-                    logger.debug(f"created remote actor {len(self.backend_actors) - 1} of module {self.module_name} on {pg.id} idx={idx} with 1 gpu and {current_bundle_cpu_count_per_gpu} cpu")
+                    logger.debug(f"created remote actor {len(self.backend_actors) - 1} of module {self.module_name} on {pg.id} idx={idx} with 1 gpu, {current_bundle_cpu_count_per_gpu} cpu and environ {env_vars}")
+
             assert len(self.backend_actors) > 0
             rank_0_actor = self.backend_actors[0]
             module_master_addr = ray.get(rank_0_actor.get_ip_address.remote())
@@ -80,10 +107,11 @@ class RemoteModule:
                     scheduling_strategy=PlacementGroupSchedulingStrategy(
                         placement_group=pg,
                         placement_group_bundle_index=idx,
-                ) # , runtime_env={"env_vars": {"RAY_EXPERIMENTAL_NOSET_CUDA_VISIBLE_DEVICES": "1",}}
+                ), runtime_env={"env_vars": env_vars}
                 ).remote()
             )
-            logger.debug(f"created single remote actor of module {self.module_name} on {pg.id} idx={idx} with {current_bundle_gpu_count} gpu and {current_bundle_cpu_count} cpu")
+            logger.debug(f"created single remote actor of module {self.module_name} on {pg.id} idx={idx} with {current_bundle_gpu_count} gpu, {current_bundle_cpu_count} cpu and environ {env_vars}")
+
     
 
     def _call_func_of_all_remote_actors(self, func_name: str, *args, **kwargs):
