@@ -14,6 +14,9 @@ class BaseBackend:
     def get_ip_address(self):
         return ray.util.get_node_ip_address()
     
+    def get_devices_in_environ(self):
+        return os.environ.get("CUDA_VISIBLE_DEVICES")
+    
     def get_avaiable_port(self):
         port = random.randint(58000, 62000)
         return port
