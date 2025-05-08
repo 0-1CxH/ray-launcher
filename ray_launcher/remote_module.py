@@ -8,7 +8,7 @@ from functools import partial
 from loguru import logger
 from ray.util.scheduling_strategies import PlacementGroupSchedulingStrategy
 
-from .base_backend import BaseLocalModule
+from .base_local_module import BaseLocalModule
 
 PlacementGroupAndIndex = namedtuple("PlacementGroupAndIndex", ["placement_group", "bundle_index"])
 
