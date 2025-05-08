@@ -17,7 +17,7 @@ class RemoteModule:
             self, 
             backend_clz,
             placement_groups_and_indices: list[PlacementGroupAndIndex],
-            discrete_gpu_actors: bool, # must be gpu actor first, cpu actor is not discrete
+            discrete_gpu_actors: Optional[bool] = False, # must be gpu actor first, cpu actor is not discrete
             backend_actor_kwargs: Optional[dict] = None,
             export_env_var_names: Optional[List] = None,
             do_not_set_cuda_visible_devices: bool = False,
@@ -81,7 +81,7 @@ class RemoteModule:
                         ) , runtime_env={"env_vars": env_vars}
                         ).remote(**backend_actor_kwargs)
                     self.backend_actors.append(remote_actor)
-                    logger.debug(f"created remote actor {len(self.backend_actors) - 1} of module {self.module_name} (args: {backend_actor_kwargs})" 
+                    logger.debug(f"created discrete GPU remote actor {len(self.backend_actors) - 1} of module {self.module_name} (args: {backend_actor_kwargs})" 
                                  f"on {pg.id} idx={idx} with 1 gpu, {current_bundle_cpu_count_per_gpu} cpu and environ {env_vars}")
 
             assert len(self.backend_actors) > 0
@@ -104,8 +104,8 @@ class RemoteModule:
         else:
             assert len(placement_groups_and_indices) == 1, f"the actor is continuous, should not spread to groups"
             pg, idx = placement_groups_and_indices.pop()
-            current_bundle_gpu_count = int(pg.bundle_specs[idx].get("GPU"))
-            current_bundle_cpu_count = int(pg.bundle_specs[idx].get("CPU"))
+            current_bundle_gpu_count = int(pg.bundle_specs[idx].get("GPU", 0))
+            current_bundle_cpu_count = int(pg.bundle_specs[idx].get("CPU", 0))
             self.backend_actors.append(
                 ray.remote(
                     num_gpus=current_bundle_gpu_count,
@@ -117,7 +117,8 @@ class RemoteModule:
                 ), runtime_env={"env_vars": env_vars}
                 ).remote(**backend_actor_kwargs)
             )
-            logger.debug(f"created single remote actor of module {self.module_name} on {pg.id} idx={idx} with {current_bundle_gpu_count} gpu, {current_bundle_cpu_count} cpu and environ {env_vars}")
+            logger.debug(f"created single continuous GPU/CPU remote actor of module {self.module_name} (args={backend_actor_kwargs}) on "
+                         f"{pg.id} idx={idx} with {current_bundle_gpu_count} gpu, {current_bundle_cpu_count} cpu and environ {env_vars}")
 
     
 
