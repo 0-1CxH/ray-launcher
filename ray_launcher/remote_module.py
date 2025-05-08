@@ -8,7 +8,7 @@ from functools import partial
 from loguru import logger
 from ray.util.scheduling_strategies import PlacementGroupSchedulingStrategy
 
-from .base_backend import BaseBackend
+from .base_backend import BaseLocalModule
 
 PlacementGroupAndIndex = namedtuple("PlacementGroupAndIndex", ["placement_group", "bundle_index"])
 
@@ -24,7 +24,7 @@ class RemoteModule:
             module_name: Optional[str] = None
     ):
         self.backend_clz = backend_clz
-        assert issubclass(self.backend_clz, BaseBackend)
+        assert issubclass(self.backend_clz, BaseLocalModule)
         if module_name is None:
             module_name = backend_clz.__name__ + str(id(self))
         self.module_name = module_name

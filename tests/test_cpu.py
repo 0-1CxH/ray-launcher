@@ -1,6 +1,6 @@
 import os
 import time
-from ray_launcher import ClusterLauncher, BaseBackend, RemoteModule
+from ray_launcher import ClusterLauncher, BaseLocalModule, RemoteModule
 import ray
 
 
@@ -9,7 +9,7 @@ os.environ["RAY_memory_monitor_refresh_ms"] = "0"
 os.environ["RAY_DEDUP_LOGS"] = "0"
 
 
-class MockBackend(BaseBackend):
+class MockBackend(BaseLocalModule):
     def __init__(self, a, b):
         super().__init__()
         self.a = a

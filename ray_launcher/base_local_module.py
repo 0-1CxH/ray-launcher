@@ -4,7 +4,7 @@ import ray
 import random
 from loguru import logger
 
-class BaseBackend:
+class BaseLocalModule:
     def __init__(self):
         self.backend_name = self.__class__.__name__ + str(id(self))
 

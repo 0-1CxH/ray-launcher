@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="ray-launcher",
-    version="1.1.1",
+    version="1.1.2",
     description="An out-of-the-box ray cluster launcher",
     author="0-1CxH",
     author_email="h0.1c@foxmail.com",
@@ -10,7 +10,7 @@ setup(
     packages=find_packages(include=[
         "ray_launcher"
     ], exclude=[
-        'setup.py', 'test.py'
+        'setup.py', 'tests/'
     ]),
     include_package_data=False,
     install_requires=[
