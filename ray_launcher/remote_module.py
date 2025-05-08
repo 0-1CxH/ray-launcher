@@ -115,7 +115,7 @@ class RemoteModule:
                         placement_group=pg,
                         placement_group_bundle_index=idx,
                 ), runtime_env={"env_vars": env_vars}
-                ).remote()
+                ).remote(**backend_actor_kwargs)
             )
             logger.debug(f"created single remote actor of module {self.module_name} on {pg.id} idx={idx} with {current_bundle_gpu_count} gpu, {current_bundle_cpu_count} cpu and environ {env_vars}")
 
