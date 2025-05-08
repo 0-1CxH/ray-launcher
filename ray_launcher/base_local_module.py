@@ -4,7 +4,7 @@ import ray
 import random
 from loguru import logger
 
-class BaseBackend:
+class BaseLocalModule:
     def __init__(self):
         self.backend_name = self.__class__.__name__ + str(id(self))
 
@@ -13,6 +13,9 @@ class BaseBackend:
     
     def get_ip_address(self):
         return ray.util.get_node_ip_address()
+    
+    def get_devices_in_environ(self):
+        return os.environ.get("CUDA_VISIBLE_DEVICES")
     
     def get_avaiable_port(self):
         port = random.randint(58000, 62000)

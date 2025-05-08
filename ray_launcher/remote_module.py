@@ -3,11 +3,12 @@ import ray
 import inspect
 
 from collections import namedtuple
+from typing import Optional, List
 from functools import partial
 from loguru import logger
 from ray.util.scheduling_strategies import PlacementGroupSchedulingStrategy
 
-from .base_backend import BaseBackend
+from .base_local_module import BaseLocalModule
 
 PlacementGroupAndIndex = namedtuple("PlacementGroupAndIndex", ["placement_group", "bundle_index"])
 
@@ -16,13 +17,14 @@ class RemoteModule:
             self, 
             backend_clz,
             placement_groups_and_indices: list[PlacementGroupAndIndex],
-            discrete_gpu_actors: bool, # must be gpu actor first, cpu actor is not discrete
-            export_env_var_names: list = None,
+            discrete_gpu_actors: Optional[bool] = False, # must be gpu actor first, cpu actor is not discrete
+            backend_actor_kwargs: Optional[dict] = None,
+            export_env_var_names: Optional[List] = None,
             do_not_set_cuda_visible_devices: bool = False,
-            module_name: str = None
+            module_name: Optional[str] = None
     ):
         self.backend_clz = backend_clz
-        assert issubclass(self.backend_clz, BaseBackend)
+        assert issubclass(self.backend_clz, BaseLocalModule)
         if module_name is None:
             module_name = backend_clz.__name__ + str(id(self))
         self.module_name = module_name
@@ -32,10 +34,13 @@ class RemoteModule:
         self.backend_actors = []
         if export_env_var_names is None:
             export_env_var_names = []
+        if backend_actor_kwargs is None:
+            backend_actor_kwargs = {}
         self._create_backend_actors(
             placement_groups_and_indices, 
             do_not_set_cuda_visible_devices,
-            export_env_var_names
+            export_env_var_names,
+            backend_actor_kwargs
         )
 
 
@@ -43,10 +48,11 @@ class RemoteModule:
 
     
     def _create_backend_actors(
-            self, 
-            placement_groups_and_indices: list[PlacementGroupAndIndex], 
+            self,
+            placement_groups_and_indices: List[PlacementGroupAndIndex], 
             do_not_set_cuda_visible_devices: bool,
-            export_env_var_names: list
+            export_env_var_names: List,
+            backend_actor_kwargs: dict,
         ):
         env_vars = {}
         for name in export_env_var_names:
@@ -73,9 +79,10 @@ class RemoteModule:
                                 placement_group=pg,
                                 placement_group_bundle_index=idx,
                         ) , runtime_env={"env_vars": env_vars}
-                        ).remote()
+                        ).remote(**backend_actor_kwargs)
                     self.backend_actors.append(remote_actor)
-                    logger.debug(f"created remote actor {len(self.backend_actors) - 1} of module {self.module_name} on {pg.id} idx={idx} with 1 gpu, {current_bundle_cpu_count_per_gpu} cpu and environ {env_vars}")
+                    logger.debug(f"created discrete GPU remote actor {len(self.backend_actors) - 1} of module {self.module_name} (args: {backend_actor_kwargs})" 
+                                 f"on {pg.id} idx={idx} with 1 gpu, {current_bundle_cpu_count_per_gpu} cpu and environ {env_vars}")
 
             assert len(self.backend_actors) > 0
             rank_0_actor = self.backend_actors[0]
@@ -97,8 +104,8 @@ class RemoteModule:
         else:
             assert len(placement_groups_and_indices) == 1, f"the actor is continuous, should not spread to groups"
             pg, idx = placement_groups_and_indices.pop()
-            current_bundle_gpu_count = int(pg.bundle_specs[idx].get("GPU"))
-            current_bundle_cpu_count = int(pg.bundle_specs[idx].get("CPU"))
+            current_bundle_gpu_count = int(pg.bundle_specs[idx].get("GPU", 0))
+            current_bundle_cpu_count = int(pg.bundle_specs[idx].get("CPU", 0))
             self.backend_actors.append(
                 ray.remote(
                     num_gpus=current_bundle_gpu_count,
@@ -108,9 +115,10 @@ class RemoteModule:
                         placement_group=pg,
                         placement_group_bundle_index=idx,
                 ), runtime_env={"env_vars": env_vars}
-                ).remote()
+                ).remote(**backend_actor_kwargs)
             )
-            logger.debug(f"created single remote actor of module {self.module_name} on {pg.id} idx={idx} with {current_bundle_gpu_count} gpu, {current_bundle_cpu_count} cpu and environ {env_vars}")
+            logger.debug(f"created single continuous GPU/CPU remote actor of module {self.module_name} (args={backend_actor_kwargs}) on "
+                         f"{pg.id} idx={idx} with {current_bundle_gpu_count} gpu, {current_bundle_cpu_count} cpu and environ {env_vars}")
 
     
 

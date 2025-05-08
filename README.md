@@ -6,6 +6,7 @@
 
 ## Updates 
 
+- v1.1.2: add support for actor init kwargs, fix 0 GPU case, refactored `BaseBackend` as `BaseLocalModule`
 - v1.1.1: add option of not setting cuda devices when creating backend actors
 - v1.1.0: `RemoteModule` provides the wrap for fast converting local class to ray remote class
 - v1.0.1: fixed problem of exiting with 1 node 
@@ -34,7 +35,7 @@ This is the wrap of `ray.remote` and commonly used actor creation steps:
 - export environs for distributed computing if `discrete_gpu_actors is True`, including `"RANK", "WORLD_SIZE", "MASTER_ADDR", "MASTER_PORT", "LOCAL_RANK"`
 - auto detect and export the remote funcs of backend class to remote module itself
 
-note: (1) the backend class must inherit from `BaseBackend` (2) the auto export remote funcs returns a list of results of all backend actors if `discrete_gpu_actors is True` 
+note: (1) the backend class must inherit from `BaseLocalModule` (2) the auto export remote funcs returns a list of results of all backend actors if `discrete_gpu_actors is True` 
 
 ## Quick Start
 
@@ -46,7 +47,7 @@ pip install ray-launcher
 
 step2: change local class
 ```python
-class YourClass(BaseBackend):
+class YourLocalModuleClass(BaseLocalModule):
     def some_method(self):
         # ...
 ```
@@ -62,8 +63,8 @@ with ClusterLauncher(
 
     bundle = [{"GPU": 2, "CPU": 32}, {"GPU": 2, "CPU": 32}]
     pg = ray.util.placement_group(bundle, strategy="PACK")
-    module1 = RemoteModule(YourClass, [(pg, 0)], discrete_gpu_actors=True)
-    module2 = RemoteModule(YourClass, [(pg, 1)], discrete_gpu_actors=False)
+    module1 = RemoteModule(YourLocalModuleClass, [(pg, 0)], discrete_gpu_actors=True)
+    module2 = RemoteModule(YourLocalModuleClass, [(pg, 1)], discrete_gpu_actors=False)
 
     print(module1.some_method()) # this will get a list of results of calling each backend actor
     print(module2.some_method()) # this will get one single result, since there is only one backend actor
