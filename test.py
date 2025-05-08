@@ -10,6 +10,14 @@ os.environ["RAY_DEDUP_LOGS"] = "0"
 
 
 class MockBackend(BaseBackend):
+    def __init__(self, a, b):
+        super().__init__()
+        self.a = a
+        self.b = b
+    
+    def get_sum(self):
+        return self.a + self.b
+
     def get_devices(self):
         return self.backend_name + ": " + os.environ.get("CUDA_VISIBLE_DEVICES")
 
@@ -21,13 +29,19 @@ with ClusterLauncher(
     print("cluster ready")
     assert launcher.is_head_node, f"only head node reaches here"
 
-    bundle = [{"GPU": 2, "CPU": 32}, {"GPU": 2, "CPU": 32}]
+    # bundle = [{"GPU": 2, "CPU": 32}, {"GPU": 2, "CPU": 32}]
+    bundle = [{"CPU": 1}, {"CPU": 1}]
     pg = ray.util.placement_group(bundle, strategy="PACK")
-    module1 = RemoteModule(MockBackend, [(pg, 0)], discrete_gpu_actors=True)
-    module2 = RemoteModule(MockBackend, [(pg, 1)], discrete_gpu_actors=False)
+    print(f"created pg")
+    module1 = RemoteModule(MockBackend, [(pg, 0)], discrete_gpu_actors=True, backend_actor_kwargs={"a": 1, "b": 11})
+    module2 = RemoteModule(MockBackend, [(pg, 1)], discrete_gpu_actors=False, backend_actor_kwargs={"a": 2, "b": 22})
+    print("created modules")
 
     print(module1.get_devices())
     print(module2.get_devices())
+
+    print(module1.get_sum())
+    print(module2.get_sum())
 
     time.sleep(5)
 
