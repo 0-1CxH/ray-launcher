@@ -29,8 +29,7 @@ with ClusterLauncher(
     print("cluster ready")
     assert launcher.is_head_node, f"only head node reaches here"
 
-    # bundle = [{"GPU": 2, "CPU": 32}, {"GPU": 2, "CPU": 32}]
-    bundle = [{"CPU": 1}, {"CPU": 1}]
+    bundle = [{"GPU": 1, "CPU": 8}, {"GPU": 1, "CPU": 8}]
     pg = ray.util.placement_group(bundle, strategy="PACK")
     print(f"created pg")
     module1 = RemoteModule(MockBackend, [(pg, 0)], discrete_gpu_actors=True, backend_actor_kwargs={"a": 1, "b": 11})
