@@ -31,11 +31,11 @@ This ray cluster launcher wraps the following steps internally:
 
 This is the wrap of `ray.remote` and commonly used actor creation steps:
 
-- create remote actor of given backend class (if `discrete_gpu_actors is True`, create actors of the same amount of gpus in the reserved resources)
-- export environs for distributed computing if `discrete_gpu_actors is True`, including `"RANK", "WORLD_SIZE", "MASTER_ADDR", "MASTER_PORT", "LOCAL_RANK"`
+- create remote actor of given backend class (if `is_discrete_gpu_module is True`, create actors of the same amount of gpus in the reserved resources)
+- export environs for distributed computing if `is_discrete_gpu_module is True`, including `"RANK", "WORLD_SIZE", "MASTER_ADDR", "MASTER_PORT", "LOCAL_RANK"`
 - auto detect and export the remote funcs of backend class to remote module itself
 
-note: (1) the backend class must inherit from `BaseLocalModule` (2) the auto export remote funcs returns a list of results of all backend actors if `discrete_gpu_actors is True` 
+note: (1) the backend class must inherit from `BaseLocalModule` (2) the auto export remote funcs returns a list of results of all backend actors if `is_discrete_gpu_module is True` 
 
 ## Quick Start
 
@@ -63,8 +63,8 @@ with ClusterLauncher(
 
     bundle = [{"GPU": 2, "CPU": 32}, {"GPU": 2, "CPU": 32}]
     pg = ray.util.placement_group(bundle, strategy="PACK")
-    module1 = RemoteModule(YourLocalModuleClass, [(pg, 0)], discrete_gpu_actors=True)
-    module2 = RemoteModule(YourLocalModuleClass, [(pg, 1)], discrete_gpu_actors=False)
+    module1 = RemoteModule(YourLocalModuleClass, [(pg, 0)], is_discrete_gpu_module=True)
+    module2 = RemoteModule(YourLocalModuleClass, [(pg, 1)], is_discrete_gpu_module=False)
 
     print(module1.some_method()) # this will get a list of results of calling each backend actor
     print(module2.some_method()) # this will get one single result, since there is only one backend actor
