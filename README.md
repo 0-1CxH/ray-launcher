@@ -29,13 +29,77 @@ This ray cluster launcher wraps the following steps internally:
 
 ### `RemoteModule`
 
-This is the wrap of `ray.remote` and commonly used actor creation steps:
 
-- create remote actor of given backend class (if `is_discrete_gpu_module is True`, create actors of the same amount of gpus in the reserved resources)
-- export environs for distributed computing if `is_discrete_gpu_module is True`, including `"RANK", "WORLD_SIZE", "MASTER_ADDR", "MASTER_PORT", "LOCAL_RANK"`
-- auto detect and export the remote funcs of backend class to remote module itself
+The `RemoteModule` class provides a high-level abstraction for creating and managing distributed modules (actors) using Ray (wrapped `ray.remote`). It handles resource allocation, actor placement, environment setup, and function registration, allowing seamless execution across CPU/GPU resources with different parallelism strategies.
 
-note: (1) the backend class must inherit from `BaseLocalModule` (2) the auto export remote funcs returns a list of results of all backend actors if `is_discrete_gpu_module is True` 
+#### Creation Steps of RemoteModule
+
+**(Step 1) Create Remote Actors**: Instantiate backend actor(s) of the specified `backend_actor_class` (must inherit from `BaseLocalModule`) on target resources.
+**(Step 2) Resource Allocation**:  
+- **For CPU Modules**: Create 1 actor with multiple CPUs (uses all allocated CPU resources in target placement group bundle).  
+- **For Continuous GPU Modules**: Create 1 actor with multiple GPUs (uses all allocated GPU resources in target placement group bundle).  
+- **For Discrete GPU Modules**:  
+  - *Exclusive*: Create N actors (N = allocated GPU count), each exclusively using 1 full GPU.  
+  - *Colocated*: Create N actors (N = allocated GPU count), each reserving fractional GPU resources (<1.0 GPU via resource_reservation_ratio) to enable GPU sharing between actors.  
+
+**(Step 3) Environment Configuration**:
+- Propagate specified environment variables (`export_env_var_names`) to all actors
+- Automatically configure distributed parameters:
+  - Query first actor for IP/port to establish `module_master_addr` and `module_master_port`
+  - Dispatch these parameters across all actors via `set_distributed_environs()`
+
+**(Step 4) Function Registration**:
+- Auto-discover public methods from `backend_actor_class`
+- Create dual interfaces for remote execution:
+  - **Sync version**: `module.method()` (blocks until all actors complete)
+  - **Async version**: `module.method_async()` (returns futures immediately)
+- Apply calling/collecting policies to method returns
+
+#### Enums and Options
+
+**(1) `RemoteModuleType`**  
+Controls physical resource allocation strategy:
+- **CPUModule**: CPU-only actor (no GPU resources allocated)
+- **ContinuousGPUModule**: Single actor using multiple GPUs (monolithic allocation)
+- **ExclusiveDiscreteGPUModule**: Multiple actors, each with exclusive access to 1 GPU (1:1 actor-GPU mapping)
+- **ColocateDiscreteGPUModule**: Multiple actors sharing fractional GPUs (N:1 GPU mapping via resource reservations)
+
+**(2) `ModuleToActorCallingPolicy`**  
+Controls routing of method calls:
+- **CallAllBackendActors**: Broadcast call to all actors (parallel execution)  
+  *Use case: Distributed batch processing*
+- **CallFirstBackendActor**: Only execute on first actor  
+  *Use case: Singleton pattern/coordinator pattern*
+
+**(3) `ActorToModuleCollectingPolicy`**  
+Controls result aggregation:
+- **CollectAllReturnsAsList**: Returns `List[results]` from all actors  
+  *Note: Order matches actor creation order*
+- **CollectFirstReturnAsItem**: Returns single result from first actor  
+
+**(4) Function Registration Flags**  
+Controls method exposure patterns:
+- `register_aync_call` (bool):  
+  When True (default), creates async versions of all remote methods with `_async` suffix.  
+  *Async benefits*:  
+  - Enables parallel execution across actors  
+  - Returns futures immediately for lazy aggregation  
+  - Use `ray.get()` to resolve results when needed
+
+- `skip_private_func` (bool):  
+  When True (default), skips methods starting with "_"  
+  *Example*: `_internal_helper()` won't be exposed remotely
+
+**(5) Other Init Parameters**  
+Essential configuration knobs:
+- `is_discrete_gpu_module`:  
+  `True`=GPU-per-actor mode, `False`=shared-GPU mode
+- `resource_reservation_ratio`:  
+  GPU reservation per actor (1.0=full GPU, 0.5=half GPU)
+- `export_env_var_names`:  
+  Environment variables to propagate to actors (e.g., `["OMP_NUM_THREADS"]`)
+- `do_not_set_cuda_visible_devices`:  
+  Disable automatic GPU visibility management (default=False)
 
 ## Quick Start
 

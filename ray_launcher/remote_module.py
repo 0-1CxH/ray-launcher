@@ -45,7 +45,7 @@ class RemoteModule:
             do_not_set_cuda_visible_devices: bool = False,
             # actor func register
             skip_private_func: bool = True,
-            register_aync_call: bool = True,
+            register_async_call: bool = True,
     ):
         self.backend_actor_class = backend_actor_class
         assert issubclass(self.backend_actor_class, BaseLocalModule)
@@ -80,7 +80,7 @@ class RemoteModule:
         )
 
         self.remote_funcs = []
-        self._register_remote_funcs(skip_private_func, register_aync_call)
+        self._register_remote_funcs(skip_private_func, register_async_call)
     
     def get_remote_module_type(self):
         return self.remote_module_type
@@ -205,7 +205,7 @@ class RemoteModule:
             raise ValueError("invalid policy of choice")
     
     
-    def _register_remote_funcs(self, skip_private_func: bool, register_aync_call: bool):
+    def _register_remote_funcs(self, skip_private_func: bool, register_async_call: bool):
         for name, member in inspect.getmembers(self.backend_actor_class, predicate=inspect.isfunction):
             if not name.startswith("__"): # auto register all non-magic methods
                 if name.startswith("_"):
@@ -215,7 +215,7 @@ class RemoteModule:
                 self.remote_funcs.append(name)
                 setattr(self, name, partial(self._call_func_of_all_remote_actors, name, True))
                 logger.debug(f"auto detected and registered remote func (sync call): {name}({member})")
-                if register_aync_call:
+                if register_async_call:
                     setattr(self, name + "_async", partial(self._call_func_of_all_remote_actors, name, False))
                     logger.debug(f"auto detected and registered remote func (async call): {name}_async({member})")
 
