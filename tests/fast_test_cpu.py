@@ -20,6 +20,9 @@ class MockBackend(BaseLocalModule):
     
     def _private_func(self):
         return 1
+    
+    def async_in_func_name(self):
+        return 1
 
 with ClusterLauncher(
     cluster_nodes_count=int(os.environ["NNODES"]),
@@ -43,11 +46,6 @@ with ClusterLauncher(
         skip_private_func=False
     )
     print("created modules")
-    print(module1.get_registered_remote_funcs())
-    print(module1.get_remote_module_type())
-
-    print(module2.get_registered_remote_funcs())
-    print(module2.get_remote_module_type())
     
 
     print(module1.get_sum())

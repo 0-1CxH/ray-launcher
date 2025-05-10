@@ -56,6 +56,7 @@ class RemoteModule:
         self.remote_module_type = None
         
         self.backend_actors = []
+        self.backend_actor_reserved_resources = []
         if export_env_var_names is None:
             export_env_var_names = []
         if backend_actor_kwargs is None:
@@ -63,6 +64,7 @@ class RemoteModule:
         
         assert 0.0 <= resource_reservation_ratio <= 1.0, "cannot reserve more than 100% or less than 0% of resource"
         if is_discrete_gpu_module is False and resource_reservation_ratio < 1.0:
+            resource_reservation_ratio = 1.0
             logger.warning(f"setting resource_reservation_ratio < 1.0 is effective only when is_discrete_gpu_module is True")
 
         assert call_policy in ModuleToActorCallingPolicy, f"{call_policy} is not a valid module-to-actor call policy"
@@ -81,12 +83,21 @@ class RemoteModule:
 
         self.remote_funcs = []
         self._register_remote_funcs(skip_private_func, register_async_call)
+        logger.info("Remote Module Created. Info:\n" + self.format_module_info())
     
     def get_remote_module_type(self):
         return self.remote_module_type
     
     def get_registered_remote_funcs(self):
         return self.remote_funcs
+    
+    def format_module_info(self):
+        return (
+            f"Moudle Name: {self.module_name}\nModule Type: {self.remote_module_type}\n"
+            f"Backend Actor Count: {len(self.backend_actors)}\nBackend Actor Reserved Resources: {self.backend_actor_reserved_resources}\n"
+            f"Call Policy: {self.call_policy}, Collect Policy: {self.collect_policy}\n"
+            f"Registered Funcs ({len(self.remote_funcs)}): {self.remote_funcs}\n"
+        )
     
     def _create_backend_actors(
             self,
@@ -128,6 +139,7 @@ class RemoteModule:
                         ) , runtime_env={"env_vars": env_vars}
                         ).remote(**backend_actor_kwargs)
                     self.backend_actors.append(remote_actor)
+                    self.backend_actor_reserved_resources.append({"GPU": 1 * resource_reservation_ratio, "CPU": current_bundle_cpu_count_per_gpu * resource_reservation_ratio})
                     logger.debug(f"created backend actor ({_+1}/{current_bundle_gpu_count}) of {self.remote_module_type.value} module {self.module_name} (args: {backend_actor_kwargs})" 
                                  f"on {pg.id} idx={idx} with {1 * resource_reservation_ratio} gpu, {current_bundle_cpu_count_per_gpu * resource_reservation_ratio} cpu and environ {env_vars}")
 
@@ -168,6 +180,7 @@ class RemoteModule:
                 ), runtime_env={"env_vars": env_vars}
                 ).remote(**backend_actor_kwargs)
             )
+            self.backend_actor_reserved_resources.append({"GPU": current_bundle_gpu_count, "CPU": current_bundle_cpu_count})
             logger.debug(f"created single backend actor of {self.remote_module_type.value} module {self.module_name} (args={backend_actor_kwargs}) on "
                          f"{pg.id} idx={idx} with {current_bundle_gpu_count} gpu, {current_bundle_cpu_count} cpu and environ {env_vars}")
 
@@ -217,6 +230,8 @@ class RemoteModule:
                 logger.debug(f"auto detected and registered remote func (sync call): {name}({member})")
                 if register_async_call:
                     async_name = name + "_async"
+                    if "async" in name:
+                        logger.warning(f"function {name} already contains substring 'async', the mapped func will be {async_name}")
                     self.remote_funcs.append(async_name)
                     setattr(self, async_name, partial(self._call_func_of_all_remote_actors, name, False))
                     logger.debug(f"auto detected and registered remote func (async call): {async_name}({member})")

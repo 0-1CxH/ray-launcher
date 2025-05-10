@@ -6,6 +6,7 @@
 
 ## Updates 
 
+- v1.2.0: add support for: fractional GPU, colocate,  async call; add module type define, register options, call/collect options
 - v1.1.2: add support for actor init kwargs, fix 0 GPU case, refactored `BaseBackend` as `BaseLocalModule`
 - v1.1.1: add option of not setting cuda devices when creating backend actors
 - v1.1.0: `RemoteModule` provides the wrap for fast converting local class to ray remote class
@@ -35,6 +36,7 @@ The `RemoteModule` class provides a high-level abstraction for creating and mana
 #### Creation Steps of RemoteModule
 
 **(Step 1) Create Remote Actors**: Instantiate backend actor(s) of the specified `backend_actor_class` (must inherit from `BaseLocalModule`) on target resources.
+
 **(Step 2) Resource Allocation**:  
 - **For CPU Modules**: Create 1 actor with multiple CPUs (uses all allocated CPU resources in target placement group bundle).  
 - **For Continuous GPU Modules**: Create 1 actor with multiple GPUs (uses all allocated GPU resources in target placement group bundle).  
@@ -85,7 +87,6 @@ Controls method exposure patterns:
   - Enables parallel execution across actors  
   - Returns futures immediately for lazy aggregation  
   - Use `ray.get()` to resolve results when needed
-
 - `skip_private_func` (bool):  
   When True (default), skips methods starting with "_"  
   *Example*: `_internal_helper()` won't be exposed remotely
@@ -106,6 +107,8 @@ Essential configuration knobs:
 step1: install
 ```bash
 pip install ray-launcher
+# if encounter problem starting dashboard, need to install ray by:
+#   `pip install -U "ray[defaut]"`
 ```
 
 
@@ -137,5 +140,5 @@ with ClusterLauncher(
 
 ```
 
-For example, see: `test.py` or my other repository uses this lib: [LMarhsal](https://github.com/0-1CxH/LMarhsal)
+For example, see: `tests/fast_test_cpu.py` and `tests/fast_test_gpu.py`
 
