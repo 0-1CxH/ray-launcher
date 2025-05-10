@@ -175,34 +175,34 @@ class RemoteModule:
 
     def _call_func_of_all_remote_actors(self, func_name: str, is_sync_call: bool, *args, **kwargs):
         all_func_return_futures = []
-        if self.call_policy == ModuleToActorCallingPolicy.CallAllBackendActors:
+        if self.call_policy == ModuleToActorCallingPolicy.CallAllBackendActors.value:
             for actor in self.backend_actors:
                 assert hasattr(actor, func_name)
                 all_func_return_futures.append(getattr(actor, func_name).remote(*args, **kwargs))
-        elif self.call_policy == ModuleToActorCallingPolicy.CallFirstBackendActor:
+        elif self.call_policy == ModuleToActorCallingPolicy.CallFirstBackendActor.value:
             actor = self.backend_actors[0]
             assert hasattr(actor, func_name)
             all_func_return_futures.append(getattr(actor, func_name).remote(*args, **kwargs))
         else:
-            raise ValueError("invalid policy of choice")
+            raise ValueError(f"invalid policy of choice: selecte call policy is {self.call_policy}")
         
         if is_sync_call:
             all_func_returns = ray.get(all_func_return_futures)
         else:
             logger.debug(f"using async call, the result will not be obtained until ray.get")
         
-        if self.collect_policy == ActorToModuleCollectingPolicy.CollectAllReturnsAsList:
+        if self.collect_policy == ActorToModuleCollectingPolicy.CollectAllReturnsAsList.value:
             if is_sync_call:
                 return all_func_returns
             else:
                 return all_func_return_futures
-        elif self.collect_policy == ActorToModuleCollectingPolicy.CollectFirstReturnAsItem:
+        elif self.collect_policy == ActorToModuleCollectingPolicy.CollectFirstReturnAsItem.value:
             if is_sync_call:
                 return all_func_returns[0]
             else:
                 return all_func_return_futures[0]
         else:
-            raise ValueError("invalid policy of choice")
+            raise ValueError(f"invalid policy of choice: selecte collect policy is {self.collect_policy}")
     
     
     def _register_remote_funcs(self, skip_private_func: bool, register_async_call: bool):
@@ -216,6 +216,8 @@ class RemoteModule:
                 setattr(self, name, partial(self._call_func_of_all_remote_actors, name, True))
                 logger.debug(f"auto detected and registered remote func (sync call): {name}({member})")
                 if register_async_call:
-                    setattr(self, name + "_async", partial(self._call_func_of_all_remote_actors, name, False))
-                    logger.debug(f"auto detected and registered remote func (async call): {name}_async({member})")
+                    async_name = name + "_async"
+                    self.remote_funcs.append(async_name)
+                    setattr(self, async_name, partial(self._call_func_of_all_remote_actors, name, False))
+                    logger.debug(f"auto detected and registered remote func (async call): {async_name}({member})")
 

@@ -17,6 +17,9 @@ class MockBackend(BaseLocalModule):
     
     def get_sum(self):
         return self.a + self.b
+    
+    def _private_func(self):
+        return 1
 
 with ClusterLauncher(
     cluster_nodes_count=int(os.environ["NNODES"]),
@@ -26,15 +29,33 @@ with ClusterLauncher(
     print("cluster ready")
     assert launcher.is_head_node, f"only head node reaches here"
 
-    bundle = [{"CPU": 8}, {"CPU": 8}]
+    bundle = [{"CPU": 2}, {"CPU": 2}]
     pg = ray.util.placement_group(bundle, strategy="PACK")
     print(f"created pg")
-    module1 = RemoteModule(MockBackend, [(pg, 0)], is_discrete_gpu_module=False, backend_actor_kwargs={"a": 1, "b": 11})
-    module2 = RemoteModule(MockBackend, [(pg, 1)], is_discrete_gpu_module=False, backend_actor_kwargs={"a": 2, "b": 22})
+    module1 = RemoteModule(
+        MockBackend, [(pg, 0)], 
+        backend_actor_kwargs={"a": 1, "b": 11}, 
+        collect_policy="FIRST", register_async_call=False
+    )
+    module2 = RemoteModule(
+        MockBackend, [(pg, 1)],
+        backend_actor_kwargs={"a": 2, "b": 22}, 
+        skip_private_func=False
+    )
     print("created modules")
+    print(module1.get_registered_remote_funcs())
+    print(module1.get_remote_module_type())
+
+    print(module2.get_registered_remote_funcs())
+    print(module2.get_remote_module_type())
+    
 
     print(module1.get_sum())
-    print(module2.get_sum())
+    fut = module2.get_sum_async()
+    print(fut)
+    print(ray.get(fut))
+    print(module2._private_func())
+    
 
     time.sleep(5)
 
