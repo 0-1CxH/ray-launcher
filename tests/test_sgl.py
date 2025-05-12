@@ -9,8 +9,7 @@ import ray
 
 
 class SGLModule(BaseLocalModule):
-    def __init__(self, model_path, tp_size, pp_size, dp_size):
-        super().__init__()
+    def start(self, model_path, tp_size, pp_size, dp_size):
         self.device_mesh_cpu = init_device_mesh(
             "cpu", mesh_shape=(tp_size, dp_size, pp_size),  
             mesh_dim_names=["tp", "dp", "pp"]
@@ -54,13 +53,15 @@ with ClusterLauncher(
         is_discrete_gpu_module=True,
         resource_reservation_ratio=1.0,
         call_policy="ALL", collect_policy="ALL",
-        backend_actor_kwargs={
+        backend_actor_kwargs={}
+    )
+
+    m.start(**{
             "model_path": "../Qwen2.5-0.5B",
             "tp_size": 1,
             "pp_size": 1,
             "dp_size": 2
-        }
-    )
+        })
 
     print(m.generate(
         ["1+1=2, 1+2=3, 1+3=4, 1+4=", "9-1=8, 8-1=7, 7-1="],
