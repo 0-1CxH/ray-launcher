@@ -49,13 +49,13 @@ with ClusterLauncher(
     # module3 = RemoteModule(
     #     MockBackend, [(pg, 1)], 
     #     is_discrete_gpu_module=False,
-    #     resource_reservation_ratio=0.5,
     #     backend_actor_kwargs={"a": 3, "b": 33}
     # )
     print("created modules")
 
     print(module1.get_devices())
     print(module2.get_devices())
+    # print(module3.get_devices())
 
     print(module1.get_sum())
     fut = module2.get_sum_async()

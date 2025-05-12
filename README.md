@@ -13,6 +13,48 @@
 - v1.0.1: fixed problem of exiting with 1 node 
 - v1.0.0: `ClusterLauncher` that wraps dirty scripts and spin waits on multi nodes
 
+
+## Quick Start
+
+step1: install
+```bash
+pip install ray-launcher
+# if encounter problem starting dashboard, need to install ray by:
+#   `pip install -U "ray[defaut]"`
+```
+
+
+step2: change local class
+```python
+class YourLocalModuleClass(BaseLocalModule):
+    def some_method(self):
+        # ...
+```
+
+step3: start cluster and use remote module
+```python
+from ray_launcher import ClusterLauncher
+
+with ClusterLauncher(
+    cluster_nodes_count=int(os.environ["NNODES"]),
+    head_node_addr=os.environ["MASTER_ADDR"],
+) as launcher:
+
+    bundle = [{"GPU": 2, "CPU": 32}, {"GPU": 2, "CPU": 32}]
+    pg = ray.util.placement_group(bundle, strategy="PACK")
+    module1 = RemoteModule(YourLocalModuleClass, [(pg, 0)], is_discrete_gpu_module=True)
+    module2 = RemoteModule(YourLocalModuleClass, [(pg, 1)], is_discrete_gpu_module=False)
+
+    print(module1.some_method()) # this will get a list of results of calling each backend actor
+    print(module2.some_method()) # this will get one single result, since there is only one backend actor
+
+    # write other code for head node to execute
+
+```
+
+For detailed example, see: `tests/fast_test_cpu.py` and `tests/fast_test_gpu.py`
+
+
 ## Features
 
 
@@ -23,10 +65,18 @@ This ray cluster launcher wraps the following steps internally:
 - run `ray start` commands on head and worker noodes
 - run `ray.init` on all nodes
 - head node spin wait for all nodes to start
-- cluster start after all nodes joined
+- cluster start after all nodes joined (with `ClusterStatusManager`)
 - head node returns context to main code while worker nodes spin waits for cluster to be torn down
 - worker node run `ray.shutdown` and `ray stop` command after cluster starting to be torn down
 - head exits after all worker nodes exited successfully
+
+Here is a short explaination of `ClusterStatusManager`:
+
+- `ClusterStatusManager` dynamically updates the cluster's state based on the count of valid nodes
+- **INIT → READY**: When all nodes (valid_node_count == cluster_nodes_count) become valid; 
+- **READY → TEARING_DOWN**: If any node fails (valid_node_count < cluster_nodes_count); 
+- **TEARING_DOWN → FINISHED**: When no valid nodes remain (valid_node_count == 0).
+
 
 ### `RemoteModule`
 
@@ -102,43 +152,5 @@ Essential configuration knobs:
 - `do_not_set_cuda_visible_devices`:  
   Disable automatic GPU visibility management (default=False)
 
-## Quick Start
 
-step1: install
-```bash
-pip install ray-launcher
-# if encounter problem starting dashboard, need to install ray by:
-#   `pip install -U "ray[defaut]"`
-```
-
-
-step2: change local class
-```python
-class YourLocalModuleClass(BaseLocalModule):
-    def some_method(self):
-        # ...
-```
-
-step3: start cluster and use remote module
-```python
-from ray_launcher import ClusterLauncher
-
-with ClusterLauncher(
-    cluster_nodes_count=int(os.environ["NNODES"]),
-    head_node_addr=os.environ["MASTER_ADDR"],
-) as launcher:
-
-    bundle = [{"GPU": 2, "CPU": 32}, {"GPU": 2, "CPU": 32}]
-    pg = ray.util.placement_group(bundle, strategy="PACK")
-    module1 = RemoteModule(YourLocalModuleClass, [(pg, 0)], is_discrete_gpu_module=True)
-    module2 = RemoteModule(YourLocalModuleClass, [(pg, 1)], is_discrete_gpu_module=False)
-
-    print(module1.some_method()) # this will get a list of results of calling each backend actor
-    print(module2.some_method()) # this will get one single result, since there is only one backend actor
-
-    # write other code for head node to execute
-
-```
-
-For example, see: `tests/fast_test_cpu.py` and `tests/fast_test_gpu.py`
 
