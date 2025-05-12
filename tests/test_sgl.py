@@ -16,7 +16,7 @@ class SGLModule(BaseLocalModule):
         )
         self.tp_rank = self.device_mesh_cpu.get_local_rank("tp")
         self.dp_rank = self.device_mesh_cpu.get_local_rank("dp")
-        print(f"TP {self.tp_rank}/{tp_size}, DP {self.dp_rank}/{dp_size}")
+        print(f"TP {self.tp_rank}/{tp_size}, DP {self.dp_rank}/{dp_size}, IP {self.get_ip_address()}, Devices {self.get_devices_in_environ()}")
 
         self.fragment = VerlEngine(
             model_path=model_path,
@@ -24,7 +24,7 @@ class SGLModule(BaseLocalModule):
             device_mesh_cpu=self.device_mesh_cpu['tp'],
             base_gpu_id=0, # self.dp_rank,
             gpu_id_step=1, # dp_size,
-            port=30000,
+            dist_init_addr=f"{self.get_ip_address()}:{self.get_avaiable_port()}",
         )
     
     def generate(self, prompts):
@@ -63,7 +63,8 @@ with ClusterLauncher(
             "dp_size": 2
         })
 
-    print(m.generate(
+    print(m.generate([
         ["1+1=2, 1+2=3, 1+3=4, 1+4=", "9-1=8, 8-1=7, 7-1="],
         ["2*1=2, 2*2=4, 2*3=", "8/2=4, 6/2="],
+    ]
     ))
