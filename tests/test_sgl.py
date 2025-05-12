@@ -22,8 +22,8 @@ class SGLModule(BaseLocalModule):
             model_path=model_path,
             mem_fraction_static=0.5,
             device_mesh_cpu=self.device_mesh_cpu['tp'],
-            base_gpu_id=self.dp_rank,
-            gpu_id_step=dp_size,
+            base_gpu_id=0, # self.dp_rank,
+            gpu_id_step=1, # dp_size,
             port=30000,
         )
     
