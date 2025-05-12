@@ -67,8 +67,8 @@ class RemoteModule:
             resource_reservation_ratio = 1.0
             logger.warning(f"setting resource_reservation_ratio < 1.0 is effective only when is_discrete_gpu_module is True")
 
-        assert call_policy in ModuleToActorCallingPolicy, f"{call_policy} is not a valid module-to-actor call policy"
-        assert collect_policy in ActorToModuleCollectingPolicy, f"{collect_policy} is not a valid actor-to-module collect policy"
+        assert call_policy in ModuleToActorCallingPolicy._value2member_map_, f"{call_policy} is not a valid module-to-actor call policy"
+        assert collect_policy in ActorToModuleCollectingPolicy._value2member_map_, f"{collect_policy} is not a valid actor-to-module collect policy"
         self.call_policy = call_policy
         self.collect_policy = collect_policy
 
