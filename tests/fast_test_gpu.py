@@ -29,18 +29,37 @@ with ClusterLauncher(
     print("cluster ready")
     assert launcher.is_head_node, f"only head node reaches here"
 
-    bundle = [{"GPU": 2, "CPU": 8}, {"GPU": 2, "CPU": 8}]
+    bundle = [{"GPU": 2, "CPU": 8}]
+    # bundle = [{"GPU": 2, "CPU": 8}, {"GPU": 2, "CPU": 8}]
     pg = ray.util.placement_group(bundle, strategy="PACK")
     print(f"created pg")
-    module1 = RemoteModule(MockBackend, [(pg, 0)], is_discrete_gpu_module=True, backend_actor_kwargs={"a": 1, "b": 11})
-    module2 = RemoteModule(MockBackend, [(pg, 1)], is_discrete_gpu_module=False, backend_actor_kwargs={"a": 2, "b": 22})
+    module1 = RemoteModule(
+        MockBackend, [(pg, 0)], 
+        is_discrete_gpu_module=True,
+        resource_reservation_ratio=0.25,
+        call_policy="FIRST", collect_policy="FIRST",
+        backend_actor_kwargs={"a": 1, "b": 11}
+    )
+    module2 = RemoteModule(
+        MockBackend, [(pg, 0)], 
+        is_discrete_gpu_module=True,
+        resource_reservation_ratio=0.5,
+        backend_actor_kwargs={"a": 2, "b": 22}
+    )
+    # module3 = RemoteModule(
+    #     MockBackend, [(pg, 1)], 
+    #     is_discrete_gpu_module=False,
+    #     resource_reservation_ratio=0.5,
+    #     backend_actor_kwargs={"a": 3, "b": 33}
+    # )
     print("created modules")
 
     print(module1.get_devices())
     print(module2.get_devices())
 
     print(module1.get_sum())
-    print(module2.get_sum())
+    fut = module2.get_sum_async()
+    print(ray.get(fut))
 
     time.sleep(5)
 
